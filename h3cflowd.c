@@ -91,10 +91,18 @@ int main(void)
 	printf("len of uint8, uint16, uint32 = %lu, %lu, %lu\n", sizeof(uint8), sizeof(uint16), sizeof(uint32));
 	printf("len of flowloghdr %lu\n", sizeof(struct flowloghdr));
 #endif
+	int count;
 	while (1) {
 		socklen_t clen;
 		uint8 buf[MAXLEN];
 		int len;
+		count++;
+		if (count % 100)
+			printf(".");
+		if (count == 1000) {
+			printf("\n");
+			count = 0;
+		}
 		len = recvfrom(sockfd, buf, MAXLEN, 0, (struct sockaddr *)&cliaddr, &clen);
 		if (len <= 0) {
 			printf("recvfrom return 0\n");

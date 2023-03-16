@@ -1,12 +1,16 @@
-# h3cflowd: collect h3c router nat userlog(flowlog)
+# h3cflowd: collect h3c router/firewall nat userlog(flowlog)
 
-收集H3C路由器输出的流日志(flowlog/userlog)。
+收集H3C路由器/防火墙输出的nat流日志(flowlog/userlog)。
 
-参考文档：https://www.h3c.com/en/Support/Resource_Center/HK/Routers/H3C_SR6600-X_Series_Routers/H3C_SR6600-X_Series_Routers/Technical_Documents/Configure___Deploy/Configuration_Guides/H3C_SR6600_SR6600-X_CG-R7607-6W100/13/201704/990159_294551_0.htm
+参考文档：https://www.h3c.com/cn/d_201904/1173810_30005_0.htm
+
+# 说明：
+
+H3C路由器/防火墙可以将NAT流日志输出。
 
 # 使用步骤：
 
-1.  路由器上增加配置：
+1.  路由器/防火墙上增加配置：
 ```
  nat log enable
  nat log flow-begin
@@ -26,6 +30,7 @@ mkdir /natlog
 ```
 ./h3cflowd
 ```
+程序在UDP 4000端口接收数据。
 
 日志存放在/natlog目录下，每天自动生成一个文件。
 
