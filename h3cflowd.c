@@ -154,6 +154,9 @@ int main(void)
 			fprintf(fp, ":%u", ntohs(fl->dstport));
 			if (fl->dstport != fl->dstnatport)
 				fprintf(fp, "(%u)", ntohs(fl->dstnatport));
+			if (fl->in_total_pkt)
+				fprintf(fp, " %u/%u %u/%u",
+					ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte), ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte));
 			if (fl->end_tm != 0)
 				fprintf(fp, " TIME:%u", ntohl(fl->end_tm) - ntohl(fl->start_tm));
 			fprintf(fp, "\n");
