@@ -97,17 +97,17 @@ int main(void)
 		uint8 buf[MAXLEN];
 		int len;
 		count++;
-		if (count % 100 == 0 ) {
+		if (count % 100 == 0) {
 			printf(".");
 			fflush(stdout);
 		}
-		if (count == 1000) {
+		if (count >= 1000) {
 			printf("\n");
 			count = 0;
 		}
 		len = recvfrom(sockfd, buf, MAXLEN, 0, (struct sockaddr *)&cliaddr, &clen);
 		if (len <= 0) {
-			printf("recvfrom return 0\n");
+			printf("recvfrom return %d\n", len);
 			continue;
 		}
 		if (len <= 17) {
