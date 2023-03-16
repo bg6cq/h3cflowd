@@ -1,14 +1,14 @@
-# h3cflowd: collect h3c router/firewall nat userlog(flowlog)
+## h3cflowd: collect h3c router/firewall nat userlog(flowlog)
 
 收集H3C路由器/防火墙输出的nat流日志(flowlog/userlog)。
 
 参考文档：https://www.h3c.com/cn/d_201904/1173810_30005_0.htm
 
-# 说明：
+## 说明：
 
-H3C路由器/防火墙可以将NAT流日志输出。
+H3C路由器/防火墙可以将NAT流日志输出，本程序用来收集日志并存放为文件。
 
-# 使用步骤：
+## 使用步骤：
 
 1.  路由器/防火墙上增加配置：
 ```
@@ -32,7 +32,7 @@ mkdir /natlog
 ```
 程序在UDP 4000端口接收数据。
 
-每收到100条日志打印1个.。
+每收到100条日志打印1个"."字符。
 
 日志存放在/natlog目录下，每天自动生成一个文件。
 
@@ -45,4 +45,3 @@ mkdir /natlog
 23:00:17 tcp 8 172.17.1.83(202.3.6.7):39806(26169)->43.7.24.18:80
 23:00:19 tcp 1 172.17.1.83(202.3.6.7):39806(26169)->43.7.24.18:80 TIME:3
 ```
-

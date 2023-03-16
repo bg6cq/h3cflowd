@@ -17,11 +17,10 @@ typedef unsigned int uint32;
 
 struct flowloghdr {
 	uint8 ver;
-	uint8 h1;
-	uint8 h2;
-	uint8 record_num;
+	uint8 ip_version;
+	uint16 record_num;
 	uint32 tm;
-	uint32 h4;
+	uint32 total_export_record_num;
 	uint32 h5;
 };
 
@@ -55,7 +54,6 @@ char *MY_INETNTOA(uint32 ip)
 }
 
 FILE *fp = NULL;
-
 void changefile(struct tm *ctm)
 {
 #ifdef DEBUG
@@ -78,7 +76,7 @@ int main(void)
 	int sockfd;
 	struct sockaddr_in servaddr, cliaddr;
 	int lastday = 0;
-	sockfd = socket(AF_INET, SOCK_DGRAM, 0);	/* create a socket */
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	bzero(&servaddr, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -101,23 +99,16 @@ int main(void)
 			printf("recvfrom return %d\n", len);
 			continue;
 		}
-		if (len <= 17) {
+		if (len <= 16) {
 			printf("recvfrom return %d, small packet\n", len);
 			continue;
 		}
-#ifdef DEBUG
-		int i;
-		for (i = 0; i < 20; i++)
-			printf("%02X ", buf[i]);
-		printf("\n");
-#endif
 		struct flowloghdr *fhdr;
 		fhdr = (struct flowloghdr *)buf;
 #ifdef DEBUG
-		printf("len=%d, flow ver: %d, flow count: %d\n", len, fhdr->ver, fhdr->record_num);
-		printf("len should be %lu\n", sizeof(struct flowloghdr) + fhdr->record_num * sizeof(struct flowlog));
+		printf("len=%d, flow ver: %d, flow count: %d\n", len, fhdr->ver, ntohs(fhdr->record_num));
+		printf("len should be %lu\n", sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog));
 #endif
-		int j;
 		time_t rec_tm;
 		struct tm *ctm;
 		rec_tm = ntohl(fhdr->tm);
@@ -139,12 +130,10 @@ int main(void)
 			count = -1;
 		}
 		count++;
-		for (j = 0; j < fhdr->record_num; j++) {
+		int j;
+		for (j = 0; j < ntohs(fhdr->record_num); j++) {
 			struct flowlog *fl;
 			fl = (struct flowlog *)(buf + sizeof(struct flowloghdr) + sizeof(struct flowlog) * j);
-#ifdef DEBUG
-			printf("offset = %ld\n", (uint8 *) fl - buf);
-#endif
 			fprintf(fp, "%02d:%02d:%02d", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
 			if (fl->proto == 6)
 				fprintf(fp, " tcp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
