@@ -8,6 +8,10 @@
 
 1.  路由器上增加配置：
 ```
+ nat log enable
+ nat log flow-begin
+ nat log flow-end
+
  userlog flow export version 3
  userlog flow export source-ip 172.16.0.1
  userlog flow export host 172.16.21.2 port 4000
