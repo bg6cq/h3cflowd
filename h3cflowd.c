@@ -49,10 +49,23 @@ char *MY_INETNTOA(uint32 ip)
 	return b;
 }
 
+FILE *fp = NULL;
+
+void changefile(struct tm *ctm)
+{
+	char fnbuf[MAXLEN];
+	if (fp)
+		pclose(fp);
+	snprintf(fnbuf, MAXLEN, "gzip > /natlog/%04d.%02d.%02d.%02d%02d%02d.gz",
+		 ctm->tm_year + 1900, ctm->tm_mon + 1, ctm->tm_mday, ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
+	fp = popen(fnbuf, "w");
+}
+
 int main(void)
 {
 	int sockfd;
 	struct sockaddr_in servaddr, cliaddr;
+	int lastday = 0;
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);	/* create a socket */
 	bzero(&servaddr, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
@@ -94,27 +107,31 @@ int main(void)
 		struct tm *ctm;
 		rec_tm = ntohl(fhdr->tm);
 		ctm = localtime(&rec_tm);
+		if (ctm->tm_mday != lastday) {
+			changefile(ctm);
+			lastday = ctm->tm_mday;
+		}
 		for (j = 0; j < fhdr->record_num; j++) {
 			struct flowlog *fl;
 			fl = (struct flowlog *)(buf + sizeof(struct flowloghdr) + sizeof(struct flowlog) * j);
 #ifdef DEBUG
 			printf("offset = %d\n", (uint8 *) fl - buf);
 #endif
-			printf("%02d:%02d:%02d ", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
-			printf("%d %d ", fl->proto, fl->oper);
-			printf("%s", MY_INETNTOA(fl->srcip));
+			fprintf(fp, "%02d:%02d:%02d ", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
+			fprintf(fp, "%d %d ", fl->proto, fl->oper);
+			fprintf(fp, "%s", MY_INETNTOA(fl->srcip));
 			if (fl->srcip != fl->srcnatip)
-				printf("(%s)", MY_INETNTOA(fl->srcnatip));
-			printf(":%u", ntohs(fl->srcport));
+				fprintf(fp, "(%s)", MY_INETNTOA(fl->srcnatip));
+			fprintf(fp, ":%u", ntohs(fl->srcport));
 			if (fl->srcport != fl->srcnatport)
-				printf("(%u)", ntohs(fl->srcnatport));
-			printf("->%s", MY_INETNTOA(fl->dstip));
+				fprintf(fp, "(%u)", ntohs(fl->srcnatport));
+			fprintf(fp, "->%s", MY_INETNTOA(fl->dstip));
 			if (fl->dstip != fl->dstnatip)
-				printf("(%s)", MY_INETNTOA(fl->dstnatip));
-			printf(":%u", ntohs(fl->dstport));
+				fprintf(fp, "(%s)", MY_INETNTOA(fl->dstnatip));
+			fprintf(fp, ":%u", ntohs(fl->dstport));
 			if (fl->dstport != fl->dstnatport)
-				printf("(%u)", ntohs(fl->dstnatport));
-			printf("\n");
+				fprintf(fp, "(%u)", ntohs(fl->dstnatport));
+			fprintf(fp, "\n");
 		}
 	}
 	return 0;
