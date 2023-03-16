@@ -97,7 +97,7 @@ int main(void)
 		uint8 buf[MAXLEN];
 		int len;
 		count++;
-		if (count % 100) {
+		if (count % 100 == 0 ) {
 			printf(".");
 			fflush(stdout);
 		}
