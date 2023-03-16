@@ -1,7 +1,7 @@
 all: h3cflowd
 
 h3cflowd: h3cflowd.c
-	gcc -g -o h3cflowd h3cflowd.c 
+	gcc -Wall -g -o h3cflowd h3cflowd.c 
 
 indent: h3cflowd.c
 	indent h3cflowd.c  -nbad -bap -nbc -bbo -hnl -br -brs -c33 -cd33 -ncdb -ce -ci4  \

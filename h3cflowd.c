@@ -87,8 +87,10 @@ int main(void)
 		perror("bind error");
 		exit(1);
 	}
-	printf("len of uint8, uint16, uint32 = %d, %d, %d\n", sizeof(uint8), sizeof(uint16), sizeof(uint32));
-	printf("len of flowloghdr %d\n", sizeof(struct flowloghdr));
+#ifdef DEBUG
+	printf("len of uint8, uint16, uint32 = %lu, %lu, %lu\n", sizeof(uint8), sizeof(uint16), sizeof(uint32));
+	printf("len of flowloghdr %lu\n", sizeof(struct flowloghdr));
+#endif
 	while (1) {
 		socklen_t clen;
 		uint8 buf[MAXLEN];
@@ -102,8 +104,8 @@ int main(void)
 			printf("recvfrom return %d, small packet\n", len);
 			continue;
 		}
-		int i;
 #ifdef DEBUG
+		int i;
 		for (i = 0; i < 20; i++)
 			printf("%02X ", buf[i]);
 		printf("\n");
@@ -112,7 +114,7 @@ int main(void)
 		fhdr = (struct flowloghdr *)buf;
 #ifdef DEBUG
 		printf("len=%d, flow ver: %d, flow count: %d\n", len, fhdr->ver, fhdr->record_num);
-		printf("len should be %d\n", sizeof(struct flowloghdr) + fhdr->record_num * sizeof(struct flowlog));
+		printf("len should be %lu\n", sizeof(struct flowloghdr) + fhdr->record_num * sizeof(struct flowlog));
 #endif
 		int j;
 		time_t rec_tm;
@@ -127,7 +129,7 @@ int main(void)
 			struct flowlog *fl;
 			fl = (struct flowlog *)(buf + sizeof(struct flowloghdr) + sizeof(struct flowlog) * j);
 #ifdef DEBUG
-			printf("offset = %d\n", (uint8 *) fl - buf);
+			printf("offset = %ld\n", (uint8 *) fl - buf);
 #endif
 			fprintf(fp, "%02d:%02d:%02d", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
 			if (fl->proto == 6)
@@ -150,7 +152,7 @@ int main(void)
 			if (fl->dstport != fl->dstnatport)
 				fprintf(fp, "(%u)", ntohs(fl->dstnatport));
 			if (fl->end_tm != 0)
-				fprintf(fp, " TIME:%lu", ntohl(fl->end_tm) - ntohl(fl->start_tm));
+				fprintf(fp, " TIME:%u", ntohl(fl->end_tm) - ntohl(fl->start_tm));
 			fprintf(fp, "\n");
 		}
 	}
