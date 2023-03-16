@@ -1,0 +1,2 @@
+# delete 200 days old log
+0 5 * * * find /natlog -maxdepth 1 -mtime +200 -name "2*gz" -exec rm -rf {} \;
