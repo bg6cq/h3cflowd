@@ -9,7 +9,7 @@
 #define MAXLEN 		2048
 #define SERV_PORT 	4000
 
-//#define DEBUG 1
+// #define DEBUG 1
 
 typedef unsigned char uint8;
 typedef unsigned short uint16;
@@ -38,8 +38,13 @@ struct flowlog {
 	uint16 srcnatport;
 	uint16 dstport;
 	uint16 dstnatport;
-	uint32 tm;
-	uint8 x[32];
+	uint32 start_tm;
+	uint32 end_tm;
+	uint32 in_total_pkt;
+	uint32 in_total_byte;
+	uint32 out_total_pkt;
+	uint32 out_total_byte;
+	uint8 x[12];
 };
 
 char *MY_INETNTOA(uint32 ip)
@@ -53,12 +58,19 @@ FILE *fp = NULL;
 
 void changefile(struct tm *ctm)
 {
+#ifdef DEBUG
+	if (fp)
+		return;
+	else
+		fp = stdout;
+#else
 	char fnbuf[MAXLEN];
 	if (fp)
 		pclose(fp);
 	snprintf(fnbuf, MAXLEN, "gzip > /natlog/%04d.%02d.%02d.%02d%02d%02d.gz",
 		 ctm->tm_year + 1900, ctm->tm_mon + 1, ctm->tm_mday, ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
 	fp = popen(fnbuf, "w");
+#endif
 }
 
 int main(void)
@@ -117,9 +129,15 @@ int main(void)
 #ifdef DEBUG
 			printf("offset = %d\n", (uint8 *) fl - buf);
 #endif
-			fprintf(fp, "%02d:%02d:%02d ", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
-			fprintf(fp, "%d %d ", fl->proto, fl->oper);
-			fprintf(fp, "%s", MY_INETNTOA(fl->srcip));
+			fprintf(fp, "%02d:%02d:%02d", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
+			if (fl->proto == 6)
+				fprintf(fp, " tcp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
+			else if (fl->proto == 17)
+				fprintf(fp, " udp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
+			else if (fl->proto == 1)
+				fprintf(fp, " icmp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
+			else
+				fprintf(fp, " %d %d %s", fl->proto, fl->oper, MY_INETNTOA(fl->srcip));
 			if (fl->srcip != fl->srcnatip)
 				fprintf(fp, "(%s)", MY_INETNTOA(fl->srcnatip));
 			fprintf(fp, ":%u", ntohs(fl->srcport));
@@ -131,6 +149,8 @@ int main(void)
 			fprintf(fp, ":%u", ntohs(fl->dstport));
 			if (fl->dstport != fl->dstnatport)
 				fprintf(fp, "(%u)", ntohs(fl->dstnatport));
+			if (fl->end_tm != 0)
+				fprintf(fp, " TIME:%lu", ntohl(fl->end_tm) - ntohl(fl->start_tm));
 			fprintf(fp, "\n");
 		}
 	}
