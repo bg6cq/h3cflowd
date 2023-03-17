@@ -143,17 +143,20 @@ int main(int argc, char *argv[])
 			changefile(ctm);
 			lastday = ctm->tm_mday;
 		}
-		if (count == 0) {
-			printf("%02d:%02d:%02d ", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
-			fflush(stdout);
-		}
-		if (count % 100 == 1) {
-			printf(".");
-			fflush(stdout);
-		}
-		if (count >= 2000) {
-			printf("\n");
-			count = -1;
+		if (debug == 0) {
+			if (count == 0) {
+				printf("%02d:%02d:%02d ", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
+				fflush(stdout);
+			}
+
+			if (count % 100 == 1) {
+				printf(".");
+				fflush(stdout);
+			}
+			if (count >= 2000) {
+				printf("\n");
+				count = -1;
+			}
 		}
 		count++;
 		int j;
