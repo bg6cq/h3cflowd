@@ -1,6 +1,5 @@
 ## h3cflowd: collect h3c router/firewall nat userlog(flowlog)
 
-
 ## 说明：
 
 收集H3C路由器/防火墙输出的nat流日志(flowlog/userlog)。
@@ -13,21 +12,38 @@ H3C路由器/防火墙可以将NAT流日志输出，本程序用来收集日志�
 
 1.  路由器/防火墙上增加配置：
 ```
- nat log enable
- nat log flow-begin
- nat log flow-end
+ nat log enable     ; 启用nat流日志
+ nat log flow-begin ; 记录流开始信息，会产生更多日志，如果节省空间可以不启用
+ nat log flow-end   ; 记录流结束信息，必须启用
 
  userlog flow export version 3
- userlog flow export source-ip 172.16.0.1
- userlog flow export host 172.16.21.2 port 4000; 172.16.21.2 是运行本程序的机器
+ userlog flow export source-ip 172.16.0.1       ; 流日志的源IP，设备的某个IP
+ userlog flow export host 172.16.21.2 port 4000 ; 日志收集服务器，172.16.21.2 是运行本程序的机器
 ```
 
 2. 建立目录，用来存放日志
 ```
 mkdir /natlog
 ```
+日志存放在/natlog目录下，每天自动生成一个文件。
 
-3. 执行程序
+如果 / 目录下空间少，/home 目录下空间多，可以建立目录 /home/natlog  并生成 /natlog 软链接
+```
+mkdir /home/natlog
+ln -s /home/natlog /natlog
+```
+
+3. 下载、编译程序
+
+首先应该安装gcc、git软件。
+```
+cd /usr/src
+git clone https://github.com/bg6cq/h3cflowd.git
+cd h3cflowd
+make
+```
+
+4. 执行程序
 ```
 ./h3cflowd
 ```
@@ -35,9 +51,7 @@ mkdir /natlog
 
 每收到100条日志打印1个"."字符。
 
-日志存放在/natlog目录下，每天自动生成一个文件。
-
-文件是.gz压缩的文本文件，典型的内容如下：
+日志存放在/natlog目录下，是.gz压缩的文本文件，典型的内容如下：
 
 ```
 23:00:17 tcp 8 172.17.1.83(202.3.6.7):39806(26169)->43.7.24.18:80
@@ -45,6 +59,14 @@ mkdir /natlog
 ```
 8表示新建连接的记录、其他为删除连接的记录。删除连接的记录，后有该连接的持续时间。
 
-4. 启动与日志文件清理
+5. 启动与日志文件清理
 
-请参考 run.sh 和 crontab.txt
+请参考 run.sh 和 crontab.txt。
+
+run.sh可以在系统启动时执行，比如在 /etc/rc.d/rc.local 中增加
+```
+screen -d -m /usr/src/h3cflowd/run.sh  &
+```
+可以在screen中执行程序(需要安装screen)。
+
+

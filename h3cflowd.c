@@ -4,12 +4,14 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <time.h>
+#include <stdarg.h>
 
 #define MAXLEN 		2048
 #define SERV_PORT 	4000
 
-// #define DEBUG 1
+int debug = 0;
 
 typedef unsigned char uint8;
 typedef unsigned short uint16;
@@ -56,26 +58,44 @@ char *MY_INETNTOA(uint32 ip)
 FILE *fp = NULL;
 void changefile(struct tm *ctm)
 {
-#ifdef DEBUG
-	if (fp)
+	if (debug) {
+		if (fp)
+			return;
+		else
+			fp = stdout;
 		return;
-	else
-		fp = stdout;
-#else
+	}
 	char fnbuf[MAXLEN];
 	if (fp)
 		pclose(fp);
 	snprintf(fnbuf, MAXLEN, "gzip > /natlog/%04d.%02d.%02d.%02d%02d%02d.gz",
 		 ctm->tm_year + 1900, ctm->tm_mon + 1, ctm->tm_mday, ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
 	fp = popen(fnbuf, "w");
-#endif
 }
 
-int main(void)
+void usage()
+{
+	printf("h3cflowd v1.0 by james@ustc.edu.cn\n");
+	printf("collect h3c router/firewall nat userlog(flowlog)\n");
+	printf("  h3cflowd [ -d ]\n");
+	printf("        -d debug\n");
+}
+
+int main(int argc, char *argv[])
 {
 	int sockfd;
 	struct sockaddr_in servaddr, cliaddr;
 	int lastday = 0;
+	int c;
+	while ((c = getopt(argc, argv, "hd")) != EOF)
+		switch (c) {
+		case 'd':
+			debug = 1;
+			break;
+		default:
+			usage();
+			exit(0);
+		}
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	bzero(&servaddr, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
@@ -85,10 +105,10 @@ int main(void)
 		perror("bind error");
 		exit(1);
 	}
-#ifdef DEBUG
-	printf("len of uint8, uint16, uint32 = %lu, %lu, %lu\n", sizeof(uint8), sizeof(uint16), sizeof(uint32));
-	printf("len of flowloghdr %lu\n", sizeof(struct flowloghdr));
-#endif
+	if (debug) {
+		printf("length of struct flowloghdr %lu\n", sizeof(struct flowloghdr));
+		printf("length of struct flowlog %lu\n", sizeof(struct flowlog));
+	}
 	int count = 0;
 	while (1) {
 		socklen_t clen;
@@ -105,10 +125,16 @@ int main(void)
 		}
 		struct flowloghdr *fhdr;
 		fhdr = (struct flowloghdr *)buf;
-#ifdef DEBUG
-		printf("len=%d, flow ver: %d, flow count: %d\n", len, fhdr->ver, ntohs(fhdr->record_num));
-		printf("len should be %lu\n", sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog));
-#endif
+		if (debug) {
+			printf("len=%d, flow ver: %d, flow count: %d\n", len, fhdr->ver, ntohs(fhdr->record_num));
+			printf("length should be %lu\n", sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog));
+		}
+		if (len != sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog)) {
+			printf("Flow packet length ERROR, read %d bytes, but should be %lu bytes\n", len,
+			       sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog));
+			continue;
+		}
+
 		time_t rec_tm;
 		struct tm *ctm;
 		rec_tm = ntohl(fhdr->tm);
