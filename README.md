@@ -43,11 +43,22 @@ cd h3cflowd
 make
 ```
 
-4. 执行程序
+4. 测试执行程序
 ```
 ./h3cflowd -d
 ```
 程序在UDP 4000端口接收数据，因此要修改防火墙规则，允许接收UDP 4000端口数据包。
+
+如果有日志输出说明工作正常。
+
+5. 执行程序
+
+请参考 run.sh 设置开机启动执行程序。
+
+run.sh可以在系统启动时执行，比如在 /etc/rc.d/rc.local 中增加
+```
+screen -d -m /usr/src/h3cflowd/run.sh  &
+```
 
 每收到100条日志打印1个"."字符。
 
@@ -59,14 +70,7 @@ make
 ```
 8表示新建连接的记录、其他为删除连接的记录。删除连接的记录，后有该连接的持续时间。
 
-5. 启动与日志文件清理
+6. 日志文件清理
 
-请参考 run.sh 和 crontab.txt。
-
-run.sh可以在系统启动时执行，比如在 /etc/rc.d/rc.local 中增加
-```
-screen -d -m /usr/src/h3cflowd/run.sh  &
-```
-可以在screen中执行程序(需要安装screen)。
-
+请参考 crontab.txt，每天清理超过200天的日志文件。
 
