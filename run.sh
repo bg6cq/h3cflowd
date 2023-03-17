@@ -8,5 +8,8 @@ cd /usr/src/h3cflowd
 while true; do
 	date
 	echo starting h3cflowd
+	date >> run.log
+	echo starting h3cflowd >> run.log
 	./h3cflowd
+	echo h3cflowd exit >> run.log
 done
