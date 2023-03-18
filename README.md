@@ -19,6 +19,8 @@ H3C路由器/防火墙可以将NAT流日志输出，本程序用来收集日志�
  userlog flow export version 3
  userlog flow export source-ip 172.16.0.1       ; 流日志的源IP，设备的某个IP
  userlog flow export host 172.16.21.2 port 4000 ; 日志收集服务器，172.16.21.2 是运行本程序的机器
+
+ session statistics enable  ; 如果收集的日志中没有数据包/字节统计，可以启用统计
 ```
 
 ### 2. 建立目录，用来存放日志

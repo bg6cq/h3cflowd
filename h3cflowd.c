@@ -9,9 +9,10 @@
 #include <stdarg.h>
 
 #define MAXLEN 		2048
-#define SERV_PORT 	4000
 
 int debug = 0;
+int port = 4000;
+char work_dir[MAXLEN] = "/natlog";
 
 typedef unsigned char uint8;
 typedef unsigned short uint16;
@@ -68,17 +69,22 @@ void changefile(struct tm *ctm)
 	char fnbuf[MAXLEN];
 	if (fp)
 		pclose(fp);
-	snprintf(fnbuf, MAXLEN, "gzip > /natlog/%04d.%02d.%02d.%02d%02d%02d.gz",
-		 ctm->tm_year + 1900, ctm->tm_mon + 1, ctm->tm_mday, ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
+	snprintf(fnbuf, MAXLEN, "gzip > %s/%04d.%02d.%02d.%02d%02d%02d.gz",
+		 work_dir, ctm->tm_year + 1900, ctm->tm_mon + 1, ctm->tm_mday, ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
 	fp = popen(fnbuf, "w");
 }
 
 void usage()
 {
-	printf("h3cflowd v1.0 by james@ustc.edu.cn\n");
-	printf("collect h3c router/firewall nat userlog(flowlog)\n");
-	printf("  h3cflowd [ -d ]\n");
-	printf("        -d debug\n");
+	printf(" h3cflowd v1.0 by james@ustc.edu.cn\n");
+	printf("\n");
+	printf("  collect h3c router/firewall nat userlog(flowlog)\n");
+	printf("\n");
+	printf("  h3cflowd [ -d ] [ -p port ] [ -w work_dir ]\n");
+	printf("        -d            enable debug\n");
+	printf("        -p port       udp port, default is 4000\n");
+	printf("        -w work_dir   directory to save log file, default is /natlog\n");
+	printf("\n");
 }
 
 int main(int argc, char *argv[])
@@ -87,20 +93,28 @@ int main(int argc, char *argv[])
 	struct sockaddr_in servaddr, cliaddr;
 	int lastday = 0;
 	int c;
-	while ((c = getopt(argc, argv, "hd")) != EOF)
+	while ((c = getopt(argc, argv, "hdp:w:")) != EOF)
 		switch (c) {
 		case 'd':
 			debug = 1;
+			break;
+		case 'p':
+			port = atoi(optarg);
+			break;
+		case 'w':
+			strncpy(work_dir, optarg, MAXLEN);
 			break;
 		default:
 			usage();
 			exit(0);
 		}
+	printf("udp port: %d\n", port);
+	printf("work dir: %s\n", work_dir);
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	bzero(&servaddr, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	servaddr.sin_port = htons(SERV_PORT);
+	servaddr.sin_port = htons(port);
 	if (bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1) {
 		perror("bind error");
 		exit(1);
@@ -183,9 +197,9 @@ int main(int argc, char *argv[])
 			fprintf(fp, ":%u", ntohs(fl->dstport));
 			if (fl->dstport != fl->dstnatport)
 				fprintf(fp, "(%u)", ntohs(fl->dstnatport));
-			if (fl->in_total_pkt)
+			if (fl->out_total_pkt)
 				fprintf(fp, " %u/%u %u/%u",
-					ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte), ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte));
+					ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte));
 			if (fl->end_tm != 0)
 				fprintf(fp, " TIME:%u", ntohl(fl->end_tm) - ntohl(fl->start_tm));
 			fprintf(fp, "\n");
