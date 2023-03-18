@@ -111,7 +111,14 @@ FE：其他
         -w work_dir   directory to save log file, default is /natlog
 ```
 
-### 9. 日志容量估算
+### 9. 系统优化
+
+对于Linux系统，建议修改以下参数以设置足够大的UDP缓冲区，减少丢包的可能。
+```
+sysctl -w net.core.rmem_max=4194304
+```
+
+### 10. 日志容量估算
 
 每秒钟新建NAT连接的数量大致决定了日志的多少。
 
@@ -146,6 +153,6 @@ Session establishment rate: 570/s
 
 这大约是1Gbps，500人左右上网的日志规模。
 
-### 10. 其他
+### 11. 其他
 
 使用中有任何问题或建议，欢迎联系 james@ustc.edu.cn
