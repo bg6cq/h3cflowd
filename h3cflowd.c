@@ -29,7 +29,7 @@ struct flowloghdr {
 
 struct flowlog {
 	uint8 proto;
-	uint8 oper;		// 1-4 end, 8, new
+	uint8 oper;
 	uint8 ipversion;
 	uint8 tos;
 	uint32 srcip;
@@ -83,7 +83,7 @@ void usage()
 	printf("\n");
 	printf(" h3cflowd v1.0 by james@ustc.edu.cn\n");
 	printf("\n");
-	printf("  collect h3c router/firewall nat userlog(flowlog)\n");
+	printf("  collect H3C router/firewall NAT userlog(flowlog)\n");
 	printf("\n");
 	printf("  h3cflowd [ -h ] [ -d ] [ -p port ] [ -w work_dir ]\n");
 	printf("        -h            print help message\n");
