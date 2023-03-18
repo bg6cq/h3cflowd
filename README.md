@@ -111,6 +111,40 @@ FE：其他
         -w work_dir   directory to save log file, default is /natlog
 ```
 
-### 9. 其他
+### 9. 日志容量估算
+
+每秒钟新建NAT连接的数量大致决定了日志的多少。
+
+路由器/防火墙上执行`display session statistics`可以看到每秒钟新建的连接数(Session establishment rate)，从而可以估算出日志文件需要的空间。
+
+下面是一个显示的例子，每秒钟新建连接是570。
+```
+Router>dis session statistics
+Slot 0:
+Current sessions: 28817
+          TCP sessions:                13064
+          UDP sessions:                15539
+         ICMP sessions:                  213
+       ICMPv6 sessions:                    0
+     UDP-Lite sessions:                    0
+         SCTP sessions:                    0
+         DCCP sessions:                    0
+        RAWIP sessions:                    1
+
+Current relation-table entries: 1
+
+Session establishment rate: 570/s
+          TCP:                 208/s
+          UDP:                 349/s
+         ICMP:                  13/s
+```
+
+以每秒钟1000个新建连接估算，如果每个连接产生2条流日志，每天产生172.8M(1.72亿)条流日志。原始Flow 3.0流日志UDP数据包为11GB，转换为文本并压缩后，大约需要2.5GB空间。
+
+此时路由器/防火墙每秒钟发送1000*2/15=133个UDP包，大约136KB字节，占用带宽约1.1Mbps。
+
+这大约是500Mps，500人左右上网的规模。
+
+### 10. 其他
 
 使用中有任何问题或建议，欢迎联系 james@ustc.edu.cn
