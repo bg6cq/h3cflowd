@@ -76,11 +76,13 @@ void changefile(struct tm *ctm)
 
 void usage()
 {
+	printf("\n");
 	printf(" h3cflowd v1.0 by james@ustc.edu.cn\n");
 	printf("\n");
 	printf("  collect h3c router/firewall nat userlog(flowlog)\n");
 	printf("\n");
-	printf("  h3cflowd [ -d ] [ -p port ] [ -w work_dir ]\n");
+	printf("  h3cflowd [ -h ] [ -d ] [ -p port ] [ -w work_dir ]\n");
+	printf("        -h            print help message\n");
 	printf("        -d            enable debug\n");
 	printf("        -p port       udp port, default is 4000\n");
 	printf("        -w work_dir   directory to save log file, default is /natlog\n");
