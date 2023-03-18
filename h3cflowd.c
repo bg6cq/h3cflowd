@@ -72,6 +72,10 @@ void changefile(struct tm *ctm)
 	snprintf(fnbuf, MAXLEN, "gzip > %s/%04d.%02d.%02d.%02d%02d%02d.gz",
 		 work_dir, ctm->tm_year + 1900, ctm->tm_mon + 1, ctm->tm_mday, ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
 	fp = popen(fnbuf, "w");
+	if (fp == NULL) {
+		printf("popen %s error, exit\n", fnbuf);
+		exit(0);
+	}
 }
 
 void usage()
