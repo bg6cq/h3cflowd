@@ -149,6 +149,8 @@ int main(int argc, char *argv[])
 			printf("len=%d, flow ver: %d, flow count: %d\n", len, fhdr->ver, ntohs(fhdr->record_num));
 			printf("length should be %lu\n", sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog));
 		}
+		if (fhdr->ver != 3)
+			continue;
 		if (len != sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog)) {
 			printf("Flow packet length ERROR, read %d bytes, but should be %lu bytes\n", len,
 			       sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog));
@@ -168,12 +170,11 @@ int main(int argc, char *argv[])
 				printf("%02d:%02d:%02d ", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
 				fflush(stdout);
 			}
-
 			if (count % 100 == 1) {
 				printf(".");
 				fflush(stdout);
 			}
-			if (count >= 2000) {
+			if (count >= 3000) {
 				printf("\n");
 				count = -1;
 			}

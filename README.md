@@ -20,14 +20,14 @@ H3C路由器/防火墙可以将NAT流日志输出，本程序用来收集日志(
  userlog flow export source-ip 172.16.0.1       ; 流日志的源IP，设备的某个IP
  userlog flow export host 172.16.21.2 port 4000 ; 日志收集服务器，172.16.21.2 是运行本程序的机器
 
- session statistics enable  ; 如果收集的日志中没有数据包/字节统计，可以启用统计
+ session statistics enable                      ; 如果收集的日志中没有数据包/字节统计，可以启用统计
 ```
 
 ### 2. 建立目录，用来存放日志
 ```
 mkdir /natlog
 ```
-日志压缩存放在/natlog目录下，每天自动生成一个文件。日志文件大小与网络规模和用户使用习惯有关，500个IP左右的网络，每天日志约1GB。
+日志压缩存放在/natlog目录下，每天自动生成一个文件。日志文件大小与网络规模和用户使用习惯有关，500个IP左右的网络，每天日志约1-2GB。
 
 如果 / 目录下空间少，/home 目录下空间多，可以建立目录 /home/natlog  并生成 /natlog 软链接
 ```
@@ -37,7 +37,7 @@ ln -s /home/natlog /natlog
 
 ### 3. 下载、编译程序
 
-首先应该安装gcc、git软件。
+首先安装gcc、git软件，然后
 ```
 cd /usr/src
 git clone https://github.com/bg6cq/h3cflowd.git
@@ -49,7 +49,7 @@ make
 ```
 ./h3cflowd -d
 ```
-程序在UDP 4000端口接收数据，因此要修改防火墙规则，允许接收UDP 4000端口数据包。
+程序在UDP 4000端口接收流日志数据，因此要修改防火墙规则，允许接收UDP 4000端口数据包。
 
 如果有日志输出说明工作正常。
 
@@ -57,12 +57,13 @@ make
 
 请参考 run.sh 设置开机启动执行程序。
 
-run.sh可以在系统启动时执行，比如在 /etc/rc.d/rc.local 中增加
+run.sh 可以在系统启动时执行，比如在 /etc/rc.d/rc.local 中增加
 ```
 screen -d -m /usr/src/h3cflowd/run.sh  &
 ```
+并`chmod u+x /etc/rc.d/rc.local`。
 
-程序正常执行时，每收到100条日志打印1个"."字符。
+程序正常执行时，每收到100条日志打印"."字符。
 
 ### 5. 日志文件说明
 
@@ -73,11 +74,11 @@ screen -d -m /usr/src/h3cflowd/run.sh  &
 08:21:33 tcp 2 172.16.16.41(5.40.12.10):64886(9104)->6.10.6.17:80 770/33929 2213/3269740 TIME:9
 ```
 
-时间戳来自于流日志信息，由路由器/防火墙产生，建议路由器/防火墙使用ntp对时，确保时间的准确。
+时间戳来自于NAT流日志信息，由路由器/防火墙产生，建议路由器/防火墙使用ntp对时，确保时间的准确。
 
 tcp/udp后的8/2是操作字，表示记录流日志的原因。
 
-8表示连接新建的记录。如果路由器/防火墙上不配置`nat log flow-begin`则无连接新建记录，可以节省存储空间。`1/64 0/0`是发送数据包/发送字节 接收数据包/接收字节。如果缺少发送数据包/发送字节 接收数据包/接收字节信息，请试着在路由器/防火墙上增加`session statistics enable`配置。
+8表示是连接新建的记录。如果路由器/防火墙上不配置`nat log flow-begin`则无连接新建记录，可以节省存储空间。`1/64 0/0`是发送数据包/发送字节 接收数据包/接收字节。如果缺少这部分信息，请试着在路由器/防火墙上增加`session statistics enable`配置。
 
 其他为连接结束的记录，`770/33929 2213/3269740`是发送数据包/发送字节 接收数据包/接收字节，TIME:9 是该连接的持续时间。
 
@@ -132,10 +133,6 @@ Current sessions: 28817
           TCP sessions:                13064
           UDP sessions:                15539
          ICMP sessions:                  213
-       ICMPv6 sessions:                    0
-     UDP-Lite sessions:                    0
-         SCTP sessions:                    0
-         DCCP sessions:                    0
         RAWIP sessions:                    1
 
 Current relation-table entries: 1
@@ -149,7 +146,7 @@ Session establishment rate: 570/s
 以每秒钟1000个新建连接估算，如果每个连接产生2条流日志，每天产生172.8M(1.72亿)条流日志。
 原始Flow 3.0流日志UDP数据包为11GB，转换为文本后约为14GB，压缩后大约占用2.5GB空间。
 
-此时路由器/防火墙每秒钟发送1000*2/15=133个UDP包，约136KB字节，占用带宽1.1Mbps。
+此时路由器/防火墙每秒钟发给流日志采集记录服务器1000*2/15=133个UDP包，约136KB字节，占用带宽1.1Mbps。
 
 这大约是1Gbps，500人左右上网的日志规模。
 
