@@ -15,7 +15,7 @@ UDP 包976字节，包含包头16字节，外加若干每个64字节的Flow 3.0�
 后面是15个记录(0f)，每个记录64字节：
 0-3字节
 11:08:04:00:
-11 6/17 udp/tcp
+11 1/6/17 icmp/udp/tcp
    08操作字，是新建(8)还是删除
       04可能是ipv4
          00 TOS
@@ -25,16 +25,16 @@ ac:10:51:31: 34:58:8d:6b: aa:87:e8:54: aa:87:e8:54:
 SourceIP     SrcNatIP     DestIP       DestNatIP
 
 20-27字节
-1f:40:   23:f3:     a5:01:    a5:01:
-SrcPort SrcNatPort  DestPort  DestNatPort
+1f:40:  23:f3:     a5:01:   a5:01:
+SrcPort SrcNatPort DestPort DestNatPort
   
 28-35字节
 64:12:54:79: 00:00:00:00:
-开始时间     结束时间
+开始时间     结束时间(oper 8新建连接为0)
 
 36-61字节
 00:00:00:00: 00:00:00:00: 00:00:00:00: 00:00:00:00:
-这里应该是4个统计值InTotalPkg、InTotalByte、OutTotalPkg、OutTotalByte
+4个统计值InTotalPkt、InTotalByte、OutTotalPkt、OutTotalByte
 
 52-63字节
 00:00:  00:00:   00:00:    00:00:00:00:00:00:
