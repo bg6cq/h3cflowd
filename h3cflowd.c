@@ -266,12 +266,12 @@ int main(int argc, char *argv[])
 				snprintf(json_str, MAXLEN,
 					 "{\"time\": %u,\"proto\",\"%s\",\"oper\":%d,\"srcip\":\"%s\",\"srcnatip\":\"%s\",\"dstip\":\"%s\",\"dstnatip\":\"%s\","
 					 "\"srcport\":%u,\"srcnatport\":%u,\"dstport\":%u,\"dstnatport\":%u,"
-					 "\"out_pkt\",%u,\"out_byte\":%u,\"in_pkt\":%u,\"in_byte\":%u,\"time\":%u}\n",
+					 "\"out_pkt\",%u,\"out_byte\":%u,\"in_pkt\":%u,\"in_byte\":%u,\"start_time\":%u,\"end_time\":%u}\n",
 					 ntohl(fhdr->tm), proto, fl->oper, srcip, srcnatip, dstip,
 					 dstnatip, ntohs(fl->srcport), ntohs(fl->srcnatport),
 					 ntohs(fl->dstport), ntohs(fl->dstnatport),
 					 ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte),
-					 ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte), fl->end_tm == 0 ? 0 : ntohl(fl->end_tm) - ntohl(fl->start_tm));
+					 ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte), ntohl(fl->start_tm), ntohl(fl->start_tm));
 				fprintf(fp, "%s", json_str);
 				continue;
 			}
