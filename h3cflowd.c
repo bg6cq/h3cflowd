@@ -21,6 +21,7 @@ int debug = 0;
 int port = 4000;
 int num_printdot = 100;
 char work_dir[MAXLEN] = "/natlog";
+int json_format = 0;
 
 typedef unsigned char uint8;
 typedef unsigned short uint16;
@@ -76,6 +77,18 @@ void changefile(struct tm *ctm)
 		return;
 	}
 	char fnbuf[MAXLEN];
+	if (json_format) {
+		if (fp)
+			fclose(fp);
+		snprintf(fnbuf, MAXLEN, "%s/%04d.%02d.%02d.%02d%02d%02d.log",
+			 work_dir, ctm->tm_year + 1900, ctm->tm_mon + 1, ctm->tm_mday, ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
+		fp = fopen(fnbuf, "w");
+		if (fp == NULL) {
+			printf("fopen %s error, exit\n", fnbuf);
+			exit(0);
+		}
+		return;
+	}
 	if (fp)
 		pclose(fp);
 	snprintf(fnbuf, MAXLEN, "gzip > %s/%04d.%02d.%02d.%02d%02d%02d.gz",
@@ -89,8 +102,14 @@ void changefile(struct tm *ctm)
 
 void sig_handler_hup(int signo)
 {
+	printf("receive KILL signal, exit\n");
 	if (debug)
 		exit(0);
+	if (json_format) {
+		if (fp)
+			fclose(fp);
+		exit(0);
+	}
 	if (fp)
 		pclose(fp);
 	exit(0);
@@ -109,6 +128,8 @@ void usage()
 	printf("        -p port       udp port, default is 4000\n");
 	printf("        -n number     number of udp packets to print ., default is 100\n");
 	printf("        -w work_dir   directory to save log file, default is /natlog\n");
+	printf("        -j            store log files in json format,\n");
+	printf("                      for fluentd or filebeat to read\n");
 	printf("\n");
 	printf(" Note: send KILL signal cause h3cflowd to terminate gracefully.\n");
 	printf("\n");
@@ -123,7 +144,7 @@ int main(int argc, char *argv[])
 	struct timeval last_tv;
 	uint32 udp_pkts = 0, flow_records = 0;
 	uint64 total_udp_pkts = 0, total_flow_records = 0;
-	while ((c = getopt(argc, argv, "hdp:w:n:")) != EOF)
+	while ((c = getopt(argc, argv, "hdp:w:n:j")) != EOF)
 		switch (c) {
 		case 'd':
 			debug = 1;
@@ -138,6 +159,9 @@ int main(int argc, char *argv[])
 			num_printdot = atoi(optarg);
 			if (num_printdot <= 10)
 				num_printdot = 10;
+			break;
+		case 'j':
+			json_format = 1;
 			break;
 		default:
 			usage();
@@ -183,8 +207,8 @@ int main(int argc, char *argv[])
 		if (fhdr->ver != 3)
 			continue;
 		if (len != sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog)) {
-			printf("Flow packet length ERROR, read %d bytes, but should be %lu bytes\n", len,
-			       sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog));
+			printf("Flow packet length ERROR, read %d bytes, but should be %lu bytes\n",
+			       len, sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog));
 			continue;
 		}
 		udp_pkts++;
@@ -223,6 +247,34 @@ int main(int argc, char *argv[])
 		for (j = 0; j < ntohs(fhdr->record_num); j++) {
 			struct flowlog *fl;
 			fl = (struct flowlog *)(buf + sizeof(struct flowloghdr) + sizeof(struct flowlog) * j);
+			if (json_format) {
+				char json_str[MAXLEN];
+				char proto[20];
+				char srcip[20], srcnatip[20], dstip[20], dstnatip[20];
+				if (fl->proto == 6)
+					strcpy(proto, "tcp");
+				else if (fl->proto == 17)
+					strcpy(proto, "udp");
+				else if (fl->proto == 1)
+					strcpy(proto, "icmp");
+				else
+					sprintf(proto, "%d", fl->proto);
+				strcpy(srcip, MY_INETNTOA(fl->srcip));
+				strcpy(srcnatip, MY_INETNTOA(fl->srcnatip));
+				strcpy(dstip, MY_INETNTOA(fl->dstip));
+				strcpy(dstnatip, MY_INETNTOA(fl->dstnatip));
+				snprintf(json_str, MAXLEN,
+					 "{\"time\": %u,\"proto\",\"%s\",\"oper\":%d,\"srcip\":\"%s\",\"srcnatip\":\"%s\",\"dstip\":\"%s\",\"dstnatip\":\"%s\","
+					 "\"srcport\":%u,\"srcnatport\":%u,\"dstport\":%u,\"dstnatport\":%u,"
+					 "\"out_pkt\",%u,\"out_byte\":%u,\"in_pkt\":%u,\"in_byte\":%u,\"time\":%u}\n",
+					 ntohl(fhdr->tm), proto, fl->oper, srcip, srcnatip, dstip,
+					 dstnatip, ntohs(fl->srcport), ntohs(fl->srcnatport),
+					 ntohs(fl->dstport), ntohs(fl->dstnatport),
+					 ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte),
+					 ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte), fl->end_tm == 0 ? 0 : ntohl(fl->end_tm) - ntohl(fl->start_tm));
+				fprintf(fp, "%s", json_str);
+				continue;
+			}
 			fprintf(fp, "%02d:%02d:%02d", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
 			if (fl->proto == 6)
 				fprintf(fp, " tcp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
@@ -246,11 +298,11 @@ int main(int argc, char *argv[])
 			else
 				fprintf(fp, ":%u", ntohs(fl->dstport));
 			if (fl->end_tm != 0)
-				fprintf(fp, " %u/%u %u/%u TIME:%u\n", ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt),
-					ntohl(fl->in_total_byte), ntohl(fl->end_tm) - ntohl(fl->start_tm));
+				fprintf(fp, " %u/%u %u/%u TIME:%u\n", ntohl(fl->out_total_pkt),
+					ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte), ntohl(fl->end_tm) - ntohl(fl->start_tm));
 			else
-				fprintf(fp, " %u/%u %u/%u\n", ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt),
-					ntohl(fl->in_total_byte));
+				fprintf(fp, " %u/%u %u/%u\n", ntohl(fl->out_total_pkt),
+					ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte));
 		}
 	}
 	return 0;

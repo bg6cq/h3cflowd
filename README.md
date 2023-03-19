@@ -100,11 +100,17 @@ FE：其他
 10~FE-1：以后扩充用
 ```
 
+此外，本程序还支持输出json格式(命令行使用 `-j`选项)流日志文件，以方便使用fluentd、filebeat之类的软件读取并转发到ELK系统。
+json格式文件是未压缩文本文件，占用空间较大，是默认压缩日志文件的20倍左右，因此使用json格式输出时，要关注及时清理文件。
+
 ### 7. 日志文件清理
 
 请参考 crontab.txt，自动清理超过200天的日志文件。
 
 ### 8. 程序命令行
+
+`./h3cflowd -h`输出如下帮助信息
+
 ```
   collect H3C router/firewall NAT userlog(flowlog)
 
@@ -114,6 +120,10 @@ FE：其他
         -p port       udp port, default is 4000
         -n number     number of udp packets to print ., default is 100
         -w work_dir   directory to save log file, default is /natlog
+        -j            store log files in json format,
+                      for fluentd or filebeat to read
+
+ Note: send KILL signal cause h3cflowd to terminate gracefully.
 ```
 
 ### 9. 系统优化
@@ -148,7 +158,7 @@ Session establishment rate: 570/s
 ```
 
 以每秒钟1000个新建连接估算，如果每个连接产生2条流日志，每天产生172.8M(1.72亿)条流日志。
-原始Flow 3.0流日志UDP数据包为11GB，转换为文本后约为14GB，压缩后大约占用2.5GB空间。
+原始Flow 3.0流日志UDP数据包为11GB，转换为文本后约为14GB，压缩后大约占用2.5GB空间。如果使用json格式文件，则文件大小约45GB。
 
 此时路由器/防火墙每秒钟发给流日志采集记录服务器1000*2/15=133个UDP包，约136KB字节，占用带宽1.1Mbps。
 
