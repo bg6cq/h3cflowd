@@ -8,6 +8,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <stdarg.h>
+#include <signal.h>
 
 #define MAXLEN 		2048
 
@@ -81,6 +82,14 @@ void changefile(struct tm *ctm)
 	}
 }
 
+void sig_handler_hup(int signo)
+{
+	if (debug)
+		exit(0);
+	if (fp)
+		pclose(fp);
+}
+
 void usage()
 {
 	printf("\n");
@@ -94,6 +103,8 @@ void usage()
 	printf("        -p port       udp port, default is 4000\n");
 	printf("        -n number     number of udp packets to print ., default is 100\n");
 	printf("        -w work_dir   directory to save log file, default is /natlog\n");
+	printf("\n");
+	printf(" Note: send KILL signal cause h3cflowd to terminate gracefully.\n");
 	printf("\n");
 }
 
@@ -143,6 +154,7 @@ int main(int argc, char *argv[])
 		printf("length of struct flowlog %lu\n", sizeof(struct flowlog));
 	}
 	gettimeofday(&last_tv, NULL);
+	signal(SIGHUP, sig_handler_hup);
 	while (1) {
 		socklen_t clen;
 		uint8 buf[MAXLEN];
