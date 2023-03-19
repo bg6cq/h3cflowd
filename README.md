@@ -63,7 +63,8 @@ screen -d -m /usr/src/h3cflowd/run.sh  &
 ```
 并`chmod u+x /etc/rc.d/rc.local`。
 
-程序正常执行时，每收到100条日志打印"."字符。
+程序正常执行时，每收到100个UDP流日志包显示"."字符，每显示30个"."字符会显示接收到的UDP包、流日志统计信息。
+如果您的系统流日志速率高，建议用命令参数`-n num`指定更多包再显示"，"，如`-n 1000`指定接收1000个UDP包时显示"."字符。
 
 ### 5. 日志文件说明
 
@@ -109,6 +110,7 @@ FE：其他
         -h            print help message
         -d            enable debug
         -p port       udp port, default is 4000
+        -n number     number of udp packets to print ., default is 100
         -w work_dir   directory to save log file, default is /natlog
 ```
 
