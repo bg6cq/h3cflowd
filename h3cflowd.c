@@ -1,3 +1,8 @@
+/* h3cflowd: 
+       collect H3C router/firewall NAT userlog(flowlog) Flow 3.0
+       by james@ustc.edu.cn 2023.03.16
+*/
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
@@ -231,17 +236,22 @@ int main(int argc, char *argv[])
 				fprintf(fp, "(%s)", MY_INETNTOA(fl->srcnatip));
 			fprintf(fp, ":%u", ntohs(fl->srcport));
 			if (fl->srcport != fl->srcnatport)
-				fprintf(fp, "(%u)", ntohs(fl->srcnatport));
+				fprintf(fp, ":%u(%u)", ntohs(fl->srcport), ntohs(fl->srcnatport));
+			else
+				fprintf(fp, ":%u", ntohs(fl->srcport));
 			fprintf(fp, "->%s", MY_INETNTOA(fl->dstip));
 			if (fl->dstip != fl->dstnatip)
 				fprintf(fp, "(%s)", MY_INETNTOA(fl->dstnatip));
-			fprintf(fp, ":%u", ntohs(fl->dstport));
 			if (fl->dstport != fl->dstnatport)
-				fprintf(fp, "(%u)", ntohs(fl->dstnatport));
-			fprintf(fp, " %u/%u %u/%u", ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte));
+				fprintf(fp, ":%u(%u)", ntohs(fl->dstport), ntohs(fl->dstnatport));
+			else
+				fprintf(fp, ":%u", ntohs(fl->dstport));
 			if (fl->end_tm != 0)
-				fprintf(fp, " TIME:%u", ntohl(fl->end_tm) - ntohl(fl->start_tm));
-			fprintf(fp, "\n");
+				fprintf(fp, " %u/%u %u/%u TIME:%u\n", ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt),
+					ntohl(fl->in_total_byte), ntohl(fl->end_tm) - ntohl(fl->start_tm));
+			else
+				fprintf(fp, " %u/%u %u/%u\n", ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt),
+					ntohl(fl->in_total_byte));
 		}
 	}
 	return 0;
