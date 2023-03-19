@@ -88,6 +88,7 @@ void sig_handler_hup(int signo)
 		exit(0);
 	if (fp)
 		pclose(fp);
+	exit(0);
 }
 
 void usage()
