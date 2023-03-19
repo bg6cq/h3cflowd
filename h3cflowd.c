@@ -234,7 +234,6 @@ int main(int argc, char *argv[])
 				fprintf(fp, " %d %d %s", fl->proto, fl->oper, MY_INETNTOA(fl->srcip));
 			if (fl->srcip != fl->srcnatip)
 				fprintf(fp, "(%s)", MY_INETNTOA(fl->srcnatip));
-			fprintf(fp, ":%u", ntohs(fl->srcport));
 			if (fl->srcport != fl->srcnatport)
 				fprintf(fp, ":%u(%u)", ntohs(fl->srcport), ntohs(fl->srcnatport));
 			else
