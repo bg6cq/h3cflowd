@@ -80,9 +80,8 @@ void changefile(struct tm *ctm)
 	if (json_format) {
 		if (fp)
 			fclose(fp);
-		snprintf(fnbuf, MAXLEN, "%s/%04d.%02d.%02d.%02d%02d%02d.log",
-			 work_dir, ctm->tm_year + 1900, ctm->tm_mon + 1, ctm->tm_mday, ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
-		fp = fopen(fnbuf, "w");
+		snprintf(fnbuf, MAXLEN, "%s/%04d.%02d.%02d.log", work_dir, ctm->tm_year + 1900, ctm->tm_mon + 1, ctm->tm_mday);
+		fp = fopen(fnbuf, "a");
 		if (fp == NULL) {
 			printf("fopen %s error, exit\n", fnbuf);
 			exit(0);
