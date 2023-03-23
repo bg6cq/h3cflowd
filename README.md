@@ -15,8 +15,9 @@ H3C路由器/防火墙可以将NAT流日志输出，本程序用来收集日志(
 ### 1. H3C路由器/防火墙上增加配置，输出NAT流Flow 3.0日志：
 ```
  nat log enable     ; 启用NAT流日志
+ nat log flow-active 30 ; 持续的流，每隔30分钟发送流日志，建议启用
  nat log flow-begin ; 记录流开始信息，会产生更多日志，如果节省空间可以不启用
- nat log flow-end   ; 记录流结束信息，必须启用
+ nat log flow-end   ; 记录流结束信息，建议启用
 
  userlog flow export version 3
  userlog flow export source-ip 172.16.0.1       ; 流日志的源IP，设备的某个IP
