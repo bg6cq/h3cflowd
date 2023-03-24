@@ -117,14 +117,15 @@ json格式文件是未压缩文本文件，占用空间较大，是默认压缩�
 ```
   collect H3C router/firewall NAT userlog(flowlog)
 
-  h3cflowd [ -h ] [ -d ] [ -p port ] [ -w work_dir ]
+  h3cflowd [ -h ] [ -d ] [ -j ] [ -c ] [ -p port ] [ -n num ] [ -w work_dir ]
         -h            print help message
         -d            enable debug
+        -j            store log files in json format,
+                      for fluentd or filebeat to read
+        -c            use host clock instead of router/firewall
         -p port       udp port, default is 4000
         -n number     number of udp packets to print ., default is 100
         -w work_dir   directory to save log file, default is /natlog
-        -j            store log files in json format,
-                      for fluentd or filebeat to read
 
  Note: send KILL signal cause h3cflowd to terminate gracefully.
 ```

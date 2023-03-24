@@ -22,6 +22,7 @@ int port = 4000;
 int num_printdot = 100;
 char work_dir[MAXLEN] = "/natlog";
 int json_format = 0;
+int use_host_clock = 0;
 
 typedef unsigned char uint8;
 typedef unsigned short uint16;
@@ -121,14 +122,15 @@ void usage()
 	printf("\n");
 	printf("  collect H3C router/firewall NAT userlog(flowlog)\n");
 	printf("\n");
-	printf("  h3cflowd [ -h ] [ -d ] [ -p port ] [ -n num ] [ -w work_dir ]\n");
+	printf("  h3cflowd [ -h ] [ -d ] [ -j ] [ -c ] [ -p port ] [ -n num ] [ -w work_dir ]\n");
 	printf("        -h            print help message\n");
 	printf("        -d            enable debug\n");
+	printf("        -j            store log files in json format,\n");
+	printf("                      for fluentd or filebeat to read\n");
+	printf("        -c            use host clock instead of router/firewall\n");
 	printf("        -p port       udp port, default is 4000\n");
 	printf("        -n number     number of udp packets to print ., default is 100\n");
 	printf("        -w work_dir   directory to save log file, default is /natlog\n");
-	printf("        -j            store log files in json format,\n");
-	printf("                      for fluentd or filebeat to read\n");
 	printf("\n");
 	printf(" Note: send KILL signal cause h3cflowd to terminate gracefully.\n");
 	printf("\n");
@@ -143,13 +145,16 @@ int main(int argc, char *argv[])
 	struct timeval last_tv;
 	uint32 udp_pkts = 0, flow_records = 0;
 	uint64 total_udp_pkts = 0, total_flow_records = 0;
-	while ((c = getopt(argc, argv, "hdp:w:n:j")) != EOF)
+	while ((c = getopt(argc, argv, "hdcp:w:n:j")) != EOF)
 		switch (c) {
 		case 'd':
 			debug = 1;
 			break;
 		case 'p':
 			port = atoi(optarg);
+			break;
+		case 'c':
+			use_host_clock = 1;
 			break;
 		case 'w':
 			strncpy(work_dir, optarg, MAXLEN);
@@ -216,6 +221,8 @@ int main(int argc, char *argv[])
 		total_flow_records += ntohs(fhdr->record_num);
 		time_t rec_tm;
 		struct tm *ctm;
+		if (use_host_clock)
+			fhdr->tm = htonl(time(NULL));
 		rec_tm = ntohl(fhdr->tm);
 		ctm = localtime(&rec_tm);
 		if (ctm->tm_mday != lastday) {
