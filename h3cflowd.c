@@ -295,12 +295,9 @@ int main(int argc, char *argv[])
 			fprintf(fp, " %s", MY_INETNTOA(fl->dstip));
 			fprintf(fp, " %s", MY_INETNTOA(fl->dstnatip));
 			fprintf(fp, " %u %u", ntohs(fl->dstport), ntohs(fl->dstnatport));
-			if (fl->end_tm != 0)
-				fprintf(fp, " %u/%u %u/%u TIME:%u\n", ntohl(fl->out_total_pkt),
-					ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte), ntohl(fl->end_tm) - ntohl(fl->start_tm));
-			else
-				fprintf(fp, " %u/%u %u/%u\n", ntohl(fl->out_total_pkt),
-					ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte));
+			fprintf(fp, " %u %u %u %u %u\n", ntohl(fl->out_total_pkt),
+				ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte),
+				fl->end_tm == 0 ? 0 : ntohl(fl->end_tm) - ntohl(fl->start_tm));
 		}
 	}
 	return 0;
