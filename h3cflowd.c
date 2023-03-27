@@ -290,19 +290,11 @@ int main(int argc, char *argv[])
 				fprintf(fp, " icmp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
 			else
 				fprintf(fp, " %d %d %s", fl->proto, fl->oper, MY_INETNTOA(fl->srcip));
-			if (fl->srcip != fl->srcnatip)
-				fprintf(fp, "(%s)", MY_INETNTOA(fl->srcnatip));
-			if (fl->srcport != fl->srcnatport)
-				fprintf(fp, ":%u(%u)", ntohs(fl->srcport), ntohs(fl->srcnatport));
-			else
-				fprintf(fp, ":%u", ntohs(fl->srcport));
-			fprintf(fp, "->%s", MY_INETNTOA(fl->dstip));
-			if (fl->dstip != fl->dstnatip)
-				fprintf(fp, "(%s)", MY_INETNTOA(fl->dstnatip));
-			if (fl->dstport != fl->dstnatport)
-				fprintf(fp, ":%u(%u)", ntohs(fl->dstport), ntohs(fl->dstnatport));
-			else
-				fprintf(fp, ":%u", ntohs(fl->dstport));
+			fprintf(fp, " %s", MY_INETNTOA(fl->srcnatip));
+			fprintf(fp, " %u %u", ntohs(fl->srcport), ntohs(fl->srcnatport));
+			fprintf(fp, " %s", MY_INETNTOA(fl->dstip));
+			fprintf(fp, " %s", MY_INETNTOA(fl->dstnatip));
+			fprintf(fp, " %u %u", ntohs(fl->dstport), ntohs(fl->dstnatport));
 			if (fl->end_tm != 0)
 				fprintf(fp, " %u/%u %u/%u TIME:%u\n", ntohl(fl->out_total_pkt),
 					ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte), ntohl(fl->end_tm) - ntohl(fl->start_tm));
