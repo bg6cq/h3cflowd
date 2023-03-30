@@ -10,6 +10,6 @@ while true; do
 	echo starting h3cflowd
 	date >> run.log
 	echo starting h3cflowd >> run.log
-	./h3cflowd
+	./h3cflowd | tee -a run.stdout
 	echo h3cflowd exit >> run.log
 done

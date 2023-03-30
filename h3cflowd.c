@@ -228,6 +228,8 @@ int main(int argc, char *argv[])
 		if (ctm->tm_mday != lastday) {
 			changefile(ctm);
 			lastday = ctm->tm_mday;
+			printf("\n");
+			printf("date: %04d.%02d.%02d\n", ctm->tm_year + 1900, ctm->tm_mon + 1, ctm->tm_mday);
 		}
 		if (debug == 0) {
 			if (udp_pkts == 1) {
