@@ -8,7 +8,7 @@ H3C路由器/防火墙可以将NAT流日志输出，本程序用来收集日志(
 
 参考文档：https://www.h3c.com/cn/d_201904/1173810_30005_0.htm
 
-样本数据：[sample_flow.txt](sample_flow.txt)
+数据格式：[flow_fields.md](flow_fields.md)
 
 ## 使用步骤：
 
