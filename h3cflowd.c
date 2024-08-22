@@ -1,5 +1,5 @@
 /* h3cflowd: 
-       collect H3C router/firewall NAT userlog(flowlog) Flow 3.0
+       collect H3C router/firewall NAT userlog(flowlog) Flow 3
        by james@ustc.edu.cn 2023.03.16
 */
 
@@ -13,6 +13,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <stdarg.h>
+#include <arpa/inet.h>
 #include <signal.h>
 
 #define MAXLEN 		2048
@@ -31,14 +32,14 @@ typedef unsigned long int uint64;
 
 struct flowloghdr {
 	uint8 ver;
-	uint8 ip_version;
+	uint8 log_type;
 	uint16 record_num;
 	uint32 tm;
 	uint32 total_export_record_num;
 	uint32 x;
 };
 
-struct flowlog {
+struct flowlog_ipv4_v3 {
 	uint8 proto;
 	uint8 oper;
 	uint8 ipversion;
@@ -51,6 +52,24 @@ struct flowlog {
 	uint16 srcnatport;
 	uint16 dstport;
 	uint16 dstnatport;
+	uint32 start_tm;
+	uint32 end_tm;
+	uint32 in_total_pkt;
+	uint32 in_total_byte;
+	uint32 out_total_pkt;
+	uint32 out_total_byte;
+	uint8 x[12];
+};
+
+struct flowlog_ipv6_v3 {
+	uint8 proto;
+	uint8 oper;
+	uint8 ipversion;
+	uint8 tos;
+	uint8 srcip[16];
+	uint8 dstip[16];
+	uint16 srcport;
+	uint16 dstport;
 	uint32 start_tm;
 	uint32 end_tm;
 	uint32 in_total_pkt;
@@ -120,7 +139,7 @@ void usage()
 	printf("\n");
 	printf(" h3cflowd v1.0 by james@ustc.edu.cn\n");
 	printf("\n");
-	printf("  collect H3C router/firewall NAT userlog(flowlog)\n");
+	printf("  collect H3C router/firewall NAT userlog(flowlog) 3\n");
 	printf("\n");
 	printf("  h3cflowd [ -h ] [ -d ] [ -j ] [ -c ] [ -p port ] [ -n num ] [ -w work_dir ]\n");
 	printf("        -h            print help message\n");
@@ -185,7 +204,8 @@ int main(int argc, char *argv[])
 	}
 	if (debug) {
 		printf("length of struct flowloghdr %lu\n", sizeof(struct flowloghdr));
-		printf("length of struct flowlog %lu\n", sizeof(struct flowlog));
+		printf("length of struct flowlog IPv4 v3 %lu\n", sizeof(struct flowlog_ipv4_v3));
+		printf("length of struct flowlog IPv6 v3 %lu\n", sizeof(struct flowlog_ipv6_v3));
 	}
 	gettimeofday(&last_tv, NULL);
 	signal(SIGHUP, sig_handler_hup);
@@ -204,16 +224,22 @@ int main(int argc, char *argv[])
 		}
 		struct flowloghdr *fhdr;
 		fhdr = (struct flowloghdr *)buf;
-		if (debug) {
-			printf("len=%d, flow ver: %d, flow count: %d\n", len, fhdr->ver, ntohs(fhdr->record_num));
-			printf("length should be %lu\n", sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog));
-		}
+		if (debug)
+			printf("len=%d, flow ver: %d, log type: %d, flow count: %d\n", len, fhdr->ver, fhdr->log_type, ntohs(fhdr->record_num));
 		if (fhdr->ver != 3)
 			continue;
-		if (len != sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog)) {
-			printf("Flow packet length ERROR, read %d bytes, but should be %lu bytes\n",
-			       len, sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog));
-			continue;
+		if (fhdr->log_type == 4) {	// NAT flow log
+			if (len != sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog_ipv4_v3)) {
+				printf("Flow packet length ERROR, read %d bytes, but should be %lu bytes\n",
+				       len, sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog_ipv4_v3));
+				continue;
+			}
+		} else if (fhdr->log_type == 5) {	// NAT66 flow log
+			if (len != sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog_ipv6_v3)) {
+				printf("Flow packet length ERROR, read %d bytes, but should be %lu bytes\n",
+				       len, sizeof(struct flowloghdr) + ntohs(fhdr->record_num) * sizeof(struct flowlog_ipv6_v3));
+				continue;
+			}
 		}
 		udp_pkts++;
 		total_udp_pkts++;
@@ -252,55 +278,103 @@ int main(int argc, char *argv[])
 			}
 		}
 		int j;
-		for (j = 0; j < ntohs(fhdr->record_num); j++) {
-			struct flowlog *fl;
-			fl = (struct flowlog *)(buf + sizeof(struct flowloghdr) + sizeof(struct flowlog) * j);
-			if (json_format) {
-				char json_str[MAXLEN];
-				char proto[20];
-				char srcip[20], srcnatip[20], dstip[20], dstnatip[20];
+		if (fhdr->log_type == 4)
+			for (j = 0; j < ntohs(fhdr->record_num); j++) {
+				struct flowlog_ipv4_v3 *fl;
+				fl = (struct flowlog_ipv4_v3 *)(buf + sizeof(struct flowloghdr) + sizeof(struct flowlog_ipv4_v3) * j);
+				if (json_format) {
+					char json_str[MAXLEN];
+					char proto[20];
+					char srcip[20], srcnatip[20], dstip[20], dstnatip[20];
+					if (fl->proto == 6)
+						strcpy(proto, "tcp");
+					else if (fl->proto == 17)
+						strcpy(proto, "udp");
+					else if (fl->proto == 1)
+						strcpy(proto, "icmp");
+					else
+						sprintf(proto, "%d", fl->proto);
+					strcpy(srcip, MY_INETNTOA(fl->srcip));
+					strcpy(srcnatip, MY_INETNTOA(fl->srcnatip));
+					strcpy(dstip, MY_INETNTOA(fl->dstip));
+					strcpy(dstnatip, MY_INETNTOA(fl->dstnatip));
+					snprintf(json_str, MAXLEN,
+						 "{\"time\": %u,\"proto\",\"%s\",\"oper\":%d,\"srcip\":\"%s\",\"srcnatip\":\"%s\",\"dstip\":\"%s\",\"dstnatip\":\"%s\","
+						 "\"srcport\":%u,\"srcnatport\":%u,\"dstport\":%u,\"dstnatport\":%u,"
+						 "\"out_pkt\",%u,\"out_byte\":%u,\"in_pkt\":%u,\"in_byte\":%u,\"start_time\":%u,\"end_time\":%u}\n",
+						 ntohl(fhdr->tm), proto, fl->oper, srcip, srcnatip, dstip,
+						 dstnatip, ntohs(fl->srcport), ntohs(fl->srcnatport),
+						 ntohs(fl->dstport), ntohs(fl->dstnatport),
+						 ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte),
+						 ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte), ntohl(fl->start_tm), ntohl(fl->start_tm));
+					fprintf(fp, "%s", json_str);
+					continue;
+				}
+				fprintf(fp, "%02d:%02d:%02d", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
 				if (fl->proto == 6)
-					strcpy(proto, "tcp");
+					fprintf(fp, " tcp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
 				else if (fl->proto == 17)
-					strcpy(proto, "udp");
+					fprintf(fp, " udp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
 				else if (fl->proto == 1)
-					strcpy(proto, "icmp");
+					fprintf(fp, " icmp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
 				else
-					sprintf(proto, "%d", fl->proto);
-				strcpy(srcip, MY_INETNTOA(fl->srcip));
-				strcpy(srcnatip, MY_INETNTOA(fl->srcnatip));
-				strcpy(dstip, MY_INETNTOA(fl->dstip));
-				strcpy(dstnatip, MY_INETNTOA(fl->dstnatip));
-				snprintf(json_str, MAXLEN,
-					 "{\"time\": %u,\"proto\",\"%s\",\"oper\":%d,\"srcip\":\"%s\",\"srcnatip\":\"%s\",\"dstip\":\"%s\",\"dstnatip\":\"%s\","
-					 "\"srcport\":%u,\"srcnatport\":%u,\"dstport\":%u,\"dstnatport\":%u,"
-					 "\"out_pkt\",%u,\"out_byte\":%u,\"in_pkt\":%u,\"in_byte\":%u,\"start_time\":%u,\"end_time\":%u}\n",
-					 ntohl(fhdr->tm), proto, fl->oper, srcip, srcnatip, dstip,
-					 dstnatip, ntohs(fl->srcport), ntohs(fl->srcnatport),
-					 ntohs(fl->dstport), ntohs(fl->dstnatport),
-					 ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte),
-					 ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte), ntohl(fl->start_tm), ntohl(fl->start_tm));
-				fprintf(fp, "%s", json_str);
-				continue;
+					fprintf(fp, " %d %d %s", fl->proto, fl->oper, MY_INETNTOA(fl->srcip));
+				fprintf(fp, " %s", MY_INETNTOA(fl->srcnatip));
+				fprintf(fp, " %u %u", ntohs(fl->srcport), ntohs(fl->srcnatport));
+				fprintf(fp, " %s", MY_INETNTOA(fl->dstip));
+				fprintf(fp, " %s", MY_INETNTOA(fl->dstnatip));
+				fprintf(fp, " %u %u", ntohs(fl->dstport), ntohs(fl->dstnatport));
+				fprintf(fp, " %u %u %u %u %u\n", ntohl(fl->out_total_pkt),
+					ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte),
+					fl->end_tm == 0 ? 0 : ntohl(fl->end_tm) - ntohl(fl->start_tm));
+		} else if (fhdr->log_type == 5)
+			for (j = 0; j < ntohs(fhdr->record_num); j++) {
+				printf("IPV6 IPV6\n\n");
+				struct flowlog_ipv6_v3 *fl;
+				char srcip[INET6_ADDRSTRLEN], dstip[INET6_ADDRSTRLEN];
+				fl = (struct flowlog_ipv6_v3 *)(buf + sizeof(struct flowloghdr) + sizeof(struct flowlog_ipv6_v3) * j);
+				inet_pton(AF_INET6, (const char *restrict)fl->srcip, srcip);
+				inet_pton(AF_INET6, (const char *restrict)fl->dstip, dstip);
+				if (json_format) {
+					char json_str[MAXLEN];
+					char proto[20];
+					if (fl->proto == 6)
+						strcpy(proto, "tcp");
+					else if (fl->proto == 17)
+						strcpy(proto, "udp");
+					else if (fl->proto == 1)
+						strcpy(proto, "icmp");
+					else
+						sprintf(proto, "%d", fl->proto);
+					snprintf(json_str, MAXLEN,
+						 "{\"time\": %u,\"proto\",\"%s\",\"oper\":%d,\"srcip\":\"%s\",\"dstip\":\"%s\","
+						 "\"srcport\":%u,\"dstport\":%u,"
+						 "\"out_pkt\",%u,\"out_byte\":%u,\"in_pkt\":%u,\"in_byte\":%u,\"start_time\":%u,\"end_time\":%u}\n",
+						 ntohl(fhdr->tm), proto, fl->oper, srcip, dstip,
+						 ntohs(fl->srcport),
+						 ntohs(fl->dstport),
+						 ntohl(fl->out_total_pkt), ntohl(fl->out_total_byte),
+						 ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte), ntohl(fl->start_tm), ntohl(fl->start_tm));
+					fprintf(fp, "%s", json_str);
+					continue;
+				}
+				fprintf(fp, "%02d:%02d:%02d", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
+				if (fl->proto == 6)
+					fprintf(fp, " tcp %d", fl->oper);
+				else if (fl->proto == 17)
+					fprintf(fp, " udp %d", fl->oper);
+				else if (fl->proto == 1)
+					fprintf(fp, " icmp %d", fl->oper);
+				else
+					fprintf(fp, " %d %d", fl->proto, fl->oper);
+				fprintf(fp, " %s", srcip);
+				fprintf(fp, " %u", ntohs(fl->srcport));
+				fprintf(fp, " %s", dstip);
+				fprintf(fp, " %u", ntohs(fl->dstport));
+				fprintf(fp, " %u %u %u %u %u\n", ntohl(fl->out_total_pkt),
+					ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte),
+					fl->end_tm == 0 ? 0 : ntohl(fl->end_tm) - ntohl(fl->start_tm));
 			}
-			fprintf(fp, "%02d:%02d:%02d", ctm->tm_hour, ctm->tm_min, ctm->tm_sec);
-			if (fl->proto == 6)
-				fprintf(fp, " tcp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
-			else if (fl->proto == 17)
-				fprintf(fp, " udp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
-			else if (fl->proto == 1)
-				fprintf(fp, " icmp %d %s", fl->oper, MY_INETNTOA(fl->srcip));
-			else
-				fprintf(fp, " %d %d %s", fl->proto, fl->oper, MY_INETNTOA(fl->srcip));
-			fprintf(fp, " %s", MY_INETNTOA(fl->srcnatip));
-			fprintf(fp, " %u %u", ntohs(fl->srcport), ntohs(fl->srcnatport));
-			fprintf(fp, " %s", MY_INETNTOA(fl->dstip));
-			fprintf(fp, " %s", MY_INETNTOA(fl->dstnatip));
-			fprintf(fp, " %u %u", ntohs(fl->dstport), ntohs(fl->dstnatport));
-			fprintf(fp, " %u %u %u %u %u\n", ntohl(fl->out_total_pkt),
-				ntohl(fl->out_total_byte), ntohl(fl->in_total_pkt), ntohl(fl->in_total_byte),
-				fl->end_tm == 0 ? 0 : ntohl(fl->end_tm) - ntohl(fl->start_tm));
-		}
 	}
 	return 0;
 }
