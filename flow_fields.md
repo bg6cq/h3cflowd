@@ -1,5 +1,8 @@
 ## Log header fields
 
+https://www.h3c.com/en/Support/Resource_Center/EN/NFV/Catalog/H3C_VSR/H3C_VSR/Technical_Documents/Configure___Deploy/Configuration_Guides/H3C_CG-18930/13/202405/2120023_294551_0.htm
+
+
 Fields in a log header
 ```
 Field Length (Bytes) Description 
